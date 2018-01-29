@@ -1,46 +1,55 @@
-webssh
-====================
+## WebSSH
+A simple web application to be used as an ssh client to connect to your ssh servers. It is written in Python, base on Tornado and Paramiko.
 
+### Preview
+![Login](https://github.com/huashengdun/webssh/raw/master/preview/login.png)
+![Terminal](https://github.com/huashengdun/webssh/raw/master/preview/terminal.png)
 
-WebSSH is a simple web project which support login linux server with explorer.
+### Install dependencies
+```
+$ pip install -r requirements.txt
+```
 
-** ⚠ This project is no longer maintained and thank you for your support. ⚠
+### Run
 
-License: `MIT` (see LICENSE)
+```
+// default listen on 127.0.0.1:8888
+$ python main.py
 
-Information
------------
+// change listen address and port
+$ python main.py --address='0.0.0.0' --port=8000
 
-> 1.git clone https://github.com/xsank/webssh.git
+// change logging level
+$ python main.py --logging=debug
 
-> 2.pip install paramiko && pip install tornado
+// log to file
+$ python main.py --log-file-prefix=main.log
 
-> 3.python main.py
+```
 
-> 4.open your explorer and input your data then connect,the server init port is `9527`,
-> you can modify it in `webssh.conf` file
+### Help
 
+```
+$ python main.py --help
+```
 
-Preview
--------
-<div align="center">
-    <img src="https://raw.githubusercontent.com/xsank/webssh/master/preview/webssh.png" width = "600" height = "377" alt="login" />
-</div>
-<div align="center">
-    <img src="https://raw.githubusercontent.com/xsank/webssh/master/preview/cmd.png" width = "600" height = "295" alt="command" />
-</div>
-<div align="center">
-    <img src="https://raw.githubusercontent.com/xsank/webssh/master/preview/top.png" width = "600" height = "297" alt="top" />
-</div>
-<div align="center">
-    <img src="https://raw.githubusercontent.com/xsank/webssh/master/preview/vi.png" width = "600" height = "340" alt="vim" />
-</div>
+### Nginx config example for running this app behind an nginx server
+```
+location / { 
+    proxy_pass http://127.0.0.1:8888;
+    proxy_http_version 1.1;
+    proxy_read_timeout 300;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Real-PORT $remote_port;
+} 
+```
 
+### Tips
+* If you want to run it in a production server, please disable debug mode, set debug as False in settings.
+* Try to use Nginx as a front web server (see config example above) and enable SSL, this will prevent your ssh credentials from being uncovered. Also afterwards the communication between your browser and the web server will be encrypted as they use secured websockets.
 
-Others
-------
-To use CDN, the webssh use the version of term.js is `0.0.2`, you may update it with [new version](https://github.com/chjj/term.js).
-And now the webssh support `linux` `mac` and `windows` OS.  
-Please let me know if you meet any other problems.
-
-Email:xsank#foxmail.com
+### About Python version
+Should work from 2.7 to 3.6, but if you happen to find it does work for a specific python version, please open an issue here.

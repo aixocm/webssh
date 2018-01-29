@@ -1,84 +1,81 @@
-function openTerminal(options) {
-    var client = new WSSHClient();
-    var term = new Terminal({cols: 80, rows: 24, screenKeys: true, useStyle: true});
-    term.on('data', function (data) {
-        client.sendClientData(data);
+jQuery(function($){
+
+  var status = $('#status'),
+      btn = $('.btn-primary');
+
+  $('form#connect').submit(function(event) {
+      event.preventDefault();
+
+      var form = $(this),
+          url = form.attr('action'),
+          type = form.attr('type'),
+          data = new FormData(this);
+
+      var pk = data.get('privatekey');
+      if (pk && pk.size > 16384) {
+        status.text('Key size exceeds maximum value.');
+        return;
+      }
+
+      status.text('');
+      btn.prop('disabled', true);
+
+      $.ajax({
+          url: url,
+          type: type,
+          data: data,
+          success: callback,
+          cache: false,
+          contentType: false,
+          processData: false
+      });
+
+  });
+
+  function callback(msg) {
+   //  console.log(msg);
+    if (msg.status) {
+      status.text(msg.status);
+      setTimeout(function(){
+        btn.prop('disabled', false);
+      }, 3000);
+      return;
+    }
+
+    var ws_url = window.location.href.replace('http', 'ws'),
+        join = (ws_url[ws_url.length-1] == '/' ? '' : '/'),
+        url = ws_url + join + 'ws?id=' + msg.id,
+        socket = new WebSocket(url),
+        terminal = document.getElementById('#terminal'),
+        term = new Terminal({cursorBlink: true,clos:80,rows:30});
+
+    console.log(url);
+    term.on('data', function(data) {
+      //console.log(data);
+      socket.send(data);
     });
-    term.open();
-    $('.terminal').detach().appendTo('#term');
-    $("#term").show();
-    term.write('Connecting...');
-    client.connect({
-        onError: function (error) {
-            term.write('Error: ' + error + '\r\n');
-            console.debug('error happened');
-        },
-        onConnect: function () {
-            client.sendInitData(options);
-            client.sendClientData('\r');
-            console.debug('connection established');
-        },
-        onClose: function () {
-            term.write("\rconnection closed")
-            console.debug('connection reset by peer');
-            $('term').hide()
-        },
-        onData: function (data) {
-            term.write(data);
-            console.debug('get data:' + data);
-        }
-    })
-}
 
-var charWidth = 6.2;
-var charHeight = 15.2;
-
-/**
- * for full screen
- * @returns {{w: number, h: number}}
- */
-function getTerminalSize() {
-    var width = window.innerWidth;
-    var height = window.innerHeight;
-    return {
-        w: Math.floor(width / charWidth),
-        h: Math.floor(height / charHeight)
+    socket.onopen = function(e) {
+      $('.container').hide();
+      term.open(terminal, true);
+      term.toggleFullscreen(true);
     };
-}
 
+    socket.onmessage = function(msg) {
+      // console.log(msg);
+      term.write(msg.data);
+    };
 
-function store(options) {
-    window.localStorage.host = options.host
-    window.localStorage.port = options.port
-    window.localStorage.username = options.username
-    window.localStorage.ispwd = options.ispwd;
-    window.localStorage.secret = options.secret
-}
+    socket.onerror = function(e) {
+      console.log(e);
+    };
 
-function check() {
-    return validResult["host"] && validResult["port"] && validResult["username"];
-}
-
-function connect() {
-    var remember = $("#remember").is(":checked")
-    var options = {
-        host: $("#host").val(),
-        port: $("#port").val(),
-        username: $("#username").val(),
-        ispwd: $("input[name=ispwd]:checked").val(),
-        secret: $("#secret").val(),
-    }
-    if (remember) {
-        store(options)
-    }
-    if (check()) {
-        openTerminal(options)
-    } else {
-        for (var key in validResult) {
-            if (!validResult[key]) {
-                alert(errorMsg[key]);
-                break;
-            }
-        }
-    }
-}
+    socket.onclose = function(e) {
+      console.log(e);
+      term.destroy();
+      $('.container').show();
+      status.text(e.reason);
+      btn.prop('disabled', false);
+    };
+  }
+});
